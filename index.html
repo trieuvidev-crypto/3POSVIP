@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CÀ PHÊ SANG — POS</title>
+
+  <!-- CSS: thứ tự quan trọng -->
+  <link rel="stylesheet" href="base.css" />
+  <link rel="stylesheet" href="layout.css" />
+  <link rel="stylesheet" href="components.css" />
+  <link rel="stylesheet" href="mobile.css" />
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════
+  TOAST CONTAINER
+═══════════════════════════════════════════════ -->
+<div id="toast-container"></div>
+
+<!-- ═══════════════════════════════════════════════
+  BOTTOM NAV (mobile only — ẩn trên desktop qua CSS)
+═══════════════════════════════════════════════ -->
+<nav id="bottom-nav" style="display:none">
+  <button class="bnav-btn active" data-view="tables" onclick="App.showView('tables')">
+    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+    SƠ ĐỒ BÀN
+  </button>
+  <button class="bnav-btn" data-view="menu" onclick="App.showView('menu')">
+    <svg viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="12" y2="16"/></svg>
+    THỰC ĐƠN
+  </button>
+  <button class="bnav-btn" data-view="history" onclick="App.showView('history')">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/></svg>
+    LỊCH SỬ
+  </button>
+  <button class="bnav-btn" data-view="reports" onclick="App.showView('reports')">
+    <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+    BÁO CÁO
+  </button>
+  <button class="bnav-btn" data-view="settings" onclick="App.showView('settings')">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    CÀI ĐẶT
+  </button>
+</nav>
+
+<!-- ═══════════════════════════════════════════════
+  MODALS
+═══════════════════════════════════════════════ -->
+
+<!-- THANH TOÁN QR -->
+<div id="modal-qr" class="modal-overlay">
+  <div class="modal-box sm">
+    <p class="modal-title text-orange" style="text-align:center">THANH TOÁN QR</p>
+    <p id="qr-amount" class="qr-amount">0đ</p>
+    <div class="qr-image-wrap">
+      <img id="qr-image" src="" alt="VietQR" />
+    </div>
+    <div class="qr-info">
+      <p>Ngân hàng: <b id="qr-bank">—</b></p>
+      <p>STK: <strong id="qr-account">—</strong></p>
+      <p>Tên: <b id="qr-owner">—</b></p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-slate btn-full"
+        onclick="document.getElementById('modal-qr').classList.remove('show')">
+        Đóng
+      </button>
+      <button class="btn btn-green btn-full"
+        onclick="Payment.confirmQR()">
+        Đã nhận tiền
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- CHỤP BILL -->
+<div id="modal-camera" class="modal-overlay">
+  <div class="modal-box md">
+    <p class="modal-title">CHỤP BILL</p>
+
+    <!-- Stage: Live camera -->
+    <div id="stage-live" class="cam-stage">
+      <video id="cam-video" autoplay playsinline muted></video>
+      <button class="btn btn-orange btn-full btn-lg"
+        onclick="Camera.shoot()">
+        CHỤP ẢNH
+      </button>
+    </div>
+
+    <!-- Stage: Preview sau chụp -->
+    <div id="stage-preview" class="cam-stage">
+      <img id="cam-preview" src="" alt="Preview" />
+      <div class="cam-btn-row">
+        <button class="btn btn-slate" onclick="Camera.retake()">Chụp lại</button>
+        <button class="btn btn-blue"  onclick="Camera.download()">Tải về máy</button>
+        <button class="btn btn-green" onclick="Camera.saveToSystem()">Lưu hệ thống</button>
+      </div>
+    </div>
+
+    <!-- Stage: Lỗi camera -->
+    <div id="stage-error" class="cam-stage">
+      <p id="cam-error-msg" class="cam-error-msg">Không thể mở camera.</p>
+    </div>
+
+    <canvas id="cam-canvas" style="display:none"></canvas>
+
+    <button class="btn btn-slate btn-full" style="margin-top:12px"
+      onclick="Camera.close()">
+      Đóng
+    </button>
+  </div>
+</div>
+
+<!-- FORM THÊM / SỬA MÓN -->
+<div id="modal-menu-form" class="modal-overlay">
+  <div class="modal-box md">
+    <p id="mform-title" class="modal-title">Thêm Món Mới</p>
+
+    <div class="form-row">
+      <label>Tên món *</label>
+      <input id="mform-name" class="inp" placeholder="Tên món..." />
+    </div>
+    <div class="form-row">
+      <label>Giá (đồng)</label>
+      <input id="mform-price" class="inp" type="number" placeholder="15000" />
+    </div>
+    <div class="form-row">
+      <label>Danh mục</label>
+      <select id="mform-cat" class="inp">
+        <!-- Điền bởi JS -->
+      </select>
+    </div>
+    <div class="form-row">
+      <label>Mô tả (tuỳ chọn)</label>
+      <input id="mform-desc" class="inp" placeholder="Mô tả ngắn..." />
+    </div>
+    <div class="form-row">
+      <label class="checkbox-row">
+        <input id="mform-active" type="checkbox" checked />
+        Đang bán
+      </label>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-slate btn-full"
+        onclick="document.getElementById('modal-menu-form').classList.remove('show')">
+        Huỷ
+      </button>
+      <button class="btn btn-orange btn-full"
+        onclick="MenuMgr.save()">
+        Lưu
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- CONFIRM -->
+<div id="modal-confirm" class="modal-overlay">
+  <div class="modal-box sm">
+    <p id="confirm-msg" class="confirm-msg">Bạn có chắc không?</p>
+    <div class="modal-footer">
+      <button id="confirm-no"  class="btn btn-slate btn-full">Huỷ</button>
+      <button id="confirm-yes" class="btn btn-red   btn-full">Xác nhận</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════
+  APP
+═══════════════════════════════════════════════ -->
+<div id="app">
+
+  <!-- HEADER -->
+  <header id="header">
+    <div class="header-brand">
+      <span id="header-store">CÀ PHÊ SANG</span>
+      <span id="header-date"></span>
+    </div>
+    <nav id="nav">
+      <button class="nav-btn active" data-view="tables" onclick="App.showView('tables')">
+        SƠ ĐỒ BÀN <span class="nav-shortcut">[1]</span>
+      </button>
+      <button class="nav-btn" data-view="menu" onclick="App.showView('menu')">
+        THỰC ĐƠN <span class="nav-shortcut">[2]</span>
+      </button>
+      <button class="nav-btn" data-view="history" onclick="App.showView('history')">
+        LỊCH SỬ <span class="nav-shortcut">[3]</span>
+      </button>
+      <button class="nav-btn" data-view="reports" onclick="App.showView('reports')">
+        BÁO CÁO <span class="nav-shortcut">[4]</span>
+      </button>
+      <button class="nav-btn" data-view="settings" onclick="App.showView('settings')">
+        CÀI ĐẶT <span class="nav-shortcut">[5]</span>
+      </button>
+    </nav>
+  </header>
+
+  <!-- MAIN -->
+  <div id="main">
+
+    <!-- ═══════ SƠ ĐỒ BÀN ═══════ -->
+    <div id="view-tables" class="view show" style="overflow-y:auto">
+      <div style="padding:16px">
+        <!-- Legend -->
+        <div class="legend">
+          <div class="legend-item">
+            <span class="legend-dot" style="background:#475569"></span> Trống
+          </div>
+          <div class="legend-item">
+            <span class="legend-dot" style="background:#451a03;border:1px solid #f59e0b"></span> Đang phục vụ
+          </div>
+          <div class="legend-item">
+            <span class="legend-dot" style="background:#1a0000;border:1px solid #f87171"></span> Chờ thanh toán
+          </div>
+        </div>
+
+        <!-- Zones (sinh bởi JS) -->
+        <div id="zones-container"></div>
+
+        <!-- Stats -->
+        <div class="stats-row">
+          <div class="stat-card">
+            <div id="stat-empty" class="stat-num" style="color:#94a3b8">0</div>
+            <div class="stat-label">Bàn trống</div>
+          </div>
+          <div class="stat-card">
+            <div id="stat-serving" class="stat-num" style="color:#fbbf24">0</div>
+            <div class="stat-label">Đang phục vụ</div>
+          </div>
+          <div class="stat-card">
+            <div id="stat-waiting" class="stat-num" style="color:#f87171">0</div>
+            <div class="stat-label">Chờ thanh toán</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════ ORDER ═══════ -->
+    <div id="view-order" class="view">
+
+      <!-- Bên trái: lưới chọn món -->
+      <div class="menu-panel">
+        <div id="order-cat-bar" class="cat-bar">
+          <!-- Điền bởi JS -->
+        </div>
+        <div class="order-search-bar">
+          <input id="order-search" class="inp inp-sm" placeholder="Tìm món nhanh..."
+            oninput="Render._renderMenuGrid({search: this.value})" />
+        </div>
+        <div id="order-menu-grid" class="menu-grid">
+          <!-- Điền bởi JS -->
+        </div>
+      </div>
+
+      <!-- Toggle button (mobile only) — nằm dưới menu-panel, trên order-panel -->
+      <button id="order-panel-toggle" style="display:none"
+        onclick="MobileUI.toggleOrderPanel()">
+        <span>🛒 Xem đơn hàng</span>
+        <span id="toggle-total-val" class="toggle-total">0đ</span>
+        <span class="toggle-arrow">▲</span>
+      </button>
+
+      <!-- Bên phải: order summary -->
+      <div class="order-panel" id="order-panel-drawer">
+        <div class="order-panel-header">
+          <div>
+            <span id="order-table-id" class="order-table-label">BÀN —</span>
+            <span id="order-status-badge" class="status-badge">Trống</span>
+          </div>
+          <button class="btn btn-slate btn-sm"
+            onclick="App.showView('tables')">
+            Quay lại
+          </button>
+        </div>
+
+        <div id="order-items" class="order-items-list">
+          <!-- Điền bởi JS -->
+        </div>
+
+        <div class="order-footer">
+          <!-- VAT -->
+          <div class="vat-row">
+            <label class="checkbox-row">
+              <input id="vat-checkbox" type="checkbox"
+                onchange="Order.toggleVat(this.checked); Render._renderOrderSummary()" />
+              <span id="vat-label">VAT 8%</span>
+            </label>
+          </div>
+
+          <!-- Tổng -->
+          <div class="total-row">
+            <span class="total-label">TỔNG</span>
+            <span id="order-total" class="total-amount">0đ</span>
+          </div>
+
+          <!-- Nút action -->
+          <div class="action-grid">
+            <button id="btn-pay-cash" class="btn btn-green" disabled
+              onclick="Payment.payByCash()">
+              TIỀN MẶT
+            </button>
+            <button id="btn-pay-qr" class="btn btn-blue" disabled
+              onclick="Payment.showQR()">
+              QR BANK
+            </button>
+            <button id="btn-wait" class="btn btn-amber" disabled
+              onclick="Order.setWaiting(); Toast.info('Chuyển sang chờ thanh toán'); App.showView('tables')">
+              CHỜ TT
+            </button>
+            <button id="btn-print" class="btn btn-slate" disabled
+              onclick="Payment.printReceipt()">
+              IN HÓA ĐƠN
+            </button>
+            <button class="btn btn-purple"
+              onclick="Camera.open()">
+              CHỤP BILL
+            </button>
+            <button class="btn btn-red"
+              onclick="showConfirm('Huỷ toàn bộ order bàn này?', () => { Order.cancel(); Toast.info('Đã huỷ order'); App.showView('tables'); Render.tables(); })">
+              HUỶ ORDER
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════ QUẢN LÝ THỰC ĐƠN ═══════ -->
+    <div id="view-menu" class="view view-padded" style="overflow-y:auto">
+      <div class="menu-toolbar">
+        <h2 class="view-title" style="margin:0">QUẢN LÝ THỰC ĐƠN</h2>
+        <div style="display:flex;gap:8px">
+          <label class="btn btn-teal btn-sm" style="cursor:pointer">
+            IMPORT CSV
+            <input type="file" accept=".csv" style="display:none"
+              onchange="MenuMgr.importCSV(this.files[0]); this.value=''" />
+          </label>
+          <button class="btn btn-orange btn-sm"
+            onclick="MenuMgr.openAdd()">
+            + THÊM MÓN
+          </button>
+        </div>
+      </div>
+
+      <div class="menu-filters">
+        <input id="mmgmt-search" class="inp" style="flex:1;min-width:180px"
+          placeholder="Tìm món..."
+          oninput="Render.menuMgmt({search:this.value})" />
+        <select id="mmgmt-cat" class="inp" style="width:200px"
+          onchange="Render.menuMgmt({cat:this.value})">
+          <!-- Điền bởi JS -->
+        </select>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Tên món</th>
+              <th>Danh mục</th>
+              <th>Giá</th>
+              <th>Trạng thái</th>
+              <th>Thao tác</th>
+            </tr>
+          </thead>
+          <tbody id="menu-tbody">
+            <!-- Điền bởi JS -->
+          </tbody>
+        </table>
+      </div>
+      <p style="color:var(--dim);font-size:.7rem;margin-top:8px">
+        CSV format: Tên,Giá,Danh mục,Mô tả — mỗi món một dòng
+      </p>
+    </div>
+
+    <!-- ═══════ LỊCH SỬ ═══════ -->
+    <div id="view-history" class="view view-padded" style="overflow-y:auto">
+      <h2 class="view-title">LỊCH SỬ ORDER</h2>
+      <div class="hist-toolbar">
+        <input id="hist-date" type="date" class="inp" style="width:auto"
+          onchange="Render.history(this.value)" />
+        <span id="hist-summary" style="color:var(--muted);font-size:.82rem"></span>
+      </div>
+      <div id="history-list">
+        <!-- Điền bởi JS -->
+      </div>
+    </div>
+
+    <!-- ═══════ BÁO CÁO ═══════ -->
+    <div id="view-reports" class="view view-padded" style="overflow-y:auto">
+      <h2 class="view-title">BÁO CÁO DOANH THU</h2>
+
+      <!-- Period tabs -->
+      <div class="rep-period-bar">
+        <button class="rep-period-btn active" data-period="day"
+          onclick="this.parentNode.querySelectorAll('.rep-period-btn').forEach(b=>b.classList.remove('active')); this.classList.add('active'); Render.reports('day')">
+          Hôm nay
+        </button>
+        <button class="rep-period-btn" data-period="week"
+          onclick="this.parentNode.querySelectorAll('.rep-period-btn').forEach(b=>b.classList.remove('active')); this.classList.add('active'); Render.reports('week')">
+          Tuần này
+        </button>
+        <button class="rep-period-btn" data-period="month"
+          onclick="this.parentNode.querySelectorAll('.rep-period-btn').forEach(b=>b.classList.remove('active')); this.classList.add('active'); Render.reports('month')">
+          Tháng này
+        </button>
+      </div>
+
+      <!-- KPI cards -->
+      <div class="rep-kpi-grid">
+        <div class="kpi-card wide">
+          <div class="kpi-label">Tổng doanh thu</div>
+          <div id="rep-revenue" class="kpi-value text-orange">0đ</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Số đơn hàng</div>
+          <div id="rep-count" class="kpi-value">0</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Trung bình / đơn</div>
+          <div id="rep-avg" class="kpi-value">—</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">QR Transfer</div>
+          <div id="rep-qr" class="kpi-value text-blue">0đ</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Tiền mặt</div>
+          <div id="rep-cash" class="kpi-value text-green">0đ</div>
+        </div>
+      </div>
+
+      <!-- Top items -->
+      <h3 style="color:var(--text);font-weight:900;font-size:1rem;margin-bottom:12px">
+        TOP MÓN BÁN CHẠY
+      </h3>
+      <div class="table-wrap">
+        <div id="rep-top-items">
+          <!-- Điền bởi JS -->
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════ CÀI ĐẶT ═══════ -->
+    <div id="view-settings" class="view view-padded" style="overflow-y:auto">
+      <h2 class="view-title">CÀI ĐẶT HỆ THỐNG</h2>
+
+      <div class="settings-wrap">
+
+        <!-- Thông tin quán -->
+        <div class="section">
+          <p class="section-title">THÔNG TIN QUÁN</p>
+          <div class="settings-row">
+            <label>Tên quán</label>
+            <input id="cfg-store-name" class="inp" placeholder="Tên quán..." />
+          </div>
+          <div class="settings-row">
+            <label>Địa chỉ</label>
+            <input id="cfg-address" class="inp" placeholder="Địa chỉ quán..." />
+          </div>
+        </div>
+
+        <!-- VietQR -->
+        <div class="section" style="border-color:rgba(249,115,22,.35)">
+          <p class="section-title text-orange">VIETQR — THANH TOÁN</p>
+          <div class="settings-row">
+            <label>Mã ngân hàng (agribank / vietcombank / tcb / mb / vpbank...)</label>
+            <input id="cfg-bank-code" class="inp" placeholder="agribank" />
+          </div>
+          <div class="settings-row">
+            <label>Số tài khoản</label>
+            <input id="cfg-bank-acc" class="inp" placeholder="7400215025420" />
+          </div>
+          <div class="settings-row">
+            <label>Tên chủ tài khoản</label>
+            <input id="cfg-bank-owner" class="inp" placeholder="NGUYEN THANH SANG" />
+          </div>
+        </div>
+
+        <!-- VAT -->
+        <div class="section">
+          <p class="section-title">THUẾ VAT</p>
+          <div class="settings-row">
+            <label class="checkbox-row">
+              <input id="cfg-vat-default" type="checkbox" />
+              Bật VAT mặc định cho đơn hàng mới
+            </label>
+          </div>
+          <div class="settings-row">
+            <label>Thuế suất (%)</label>
+            <input id="cfg-vat-rate" class="inp" type="number" style="width:100px" value="8" />
+          </div>
+        </div>
+
+        <!-- Lưu -->
+        <div style="margin-bottom:16px">
+          <button class="btn btn-orange btn-lg btn-full"
+            onclick="App.saveSettings()">
+            LƯU CÀI ĐẶT
+          </button>
+        </div>
+
+        <!-- Backup -->
+        <div class="section">
+          <p class="section-title">SAO LƯU & KHÔI PHỤC</p>
+          <div class="backup-btns">
+            <button class="btn btn-green"
+              onclick="App.exportBackup()">
+              Xuất backup JSON
+            </button>
+            <label class="btn btn-blue" style="cursor:pointer">
+              Khôi phục JSON
+              <input type="file" accept=".json" style="display:none"
+                onchange="App.importBackup(this.files[0]); this.value=''" />
+            </label>
+            <button class="btn btn-red"
+              onclick="App.resetAll()">
+              Xoá tất cả
+            </button>
+          </div>
+          <p style="color:var(--dim);font-size:.7rem;margin-top:10px">
+            Dữ liệu lưu trong localStorage trình duyệt. Backup thường xuyên để tránh mất dữ liệu!
+          </p>
+        </div>
+
+        <!-- Phím tắt -->
+        <div class="section">
+          <p class="section-title">PHÍM TẮT</p>
+          <div class="shortcut-grid">
+            <div class="shortcut-item"><kbd>1</kbd> Sơ đồ bàn</div>
+            <div class="shortcut-item"><kbd>2</kbd> Thực đơn</div>
+            <div class="shortcut-item"><kbd>3</kbd> Lịch sử</div>
+            <div class="shortcut-item"><kbd>4</kbd> Báo cáo</div>
+            <div class="shortcut-item"><kbd>5</kbd> Cài đặt</div>
+            <div class="shortcut-item"><kbd>Esc</kbd> Đóng modal / về bàn</div>
+          </div>
+        </div>
+
+        <!-- Thống kê -->
+        <div class="section">
+          <p class="section-title">THỐNG KÊ HỆ THỐNG</p>
+          <div class="stats-mini-grid">
+            <div class="stats-mini-card">
+              <div id="stats-menu-count" class="stats-mini-num">0</div>
+              <div class="stats-mini-label">Món trong menu</div>
+            </div>
+            <div class="stats-mini-card">
+              <div id="stats-order-count" class="stats-mini-num">0</div>
+              <div class="stats-mini-label">Tổng đơn hàng</div>
+            </div>
+            <div class="stats-mini-card">
+              <div id="stats-paid-count" class="stats-mini-num">0</div>
+              <div class="stats-mini-label">Đã thanh toán</div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /settings-wrap -->
+    </div><!-- /view-settings -->
+
+  </div><!-- /main -->
+</div><!-- /app -->
+
+
+<!-- ═══════════════════════════════════════════════
+  JS: thứ tự load quan trọng!
+═══════════════════════════════════════════════ -->
+<script src="config.js"></script>   <!-- 1. CONFIG trước tiên -->
+<script src="db.js"></script>       <!-- 2. DB layer -->
+<script src="data.js"></script>     <!-- 3. Dữ liệu demo + constants -->
+<script src="utils.js"></script>    <!-- 4. Helper functions -->
+<script src="order.js"></script>    <!-- 5. Order + Tables logic -->
+<script src="menu.js"></script>     <!-- 6. Menu CRUD -->
+<script src="payment.js"></script>  <!-- 7. Thanh toán QR + print -->
+<script src="camera.js"></script>   <!-- 8. Chụp bill -->
+<script src="reports.js"></script>  <!-- 9. Báo cáo -->
+<script src="render.js"></script>   <!-- 10. Vẽ giao diện -->
+<script src="app.js"></script>      <!-- 11. App controller (cuối cùng) -->
+
+<!-- Khởi tạo zone grids trong HTML (để render.js điền vào) -->
+<script>
+  // Tạo zone blocks sau khi DOM sẵn sàng
+  document.addEventListener("DOMContentLoaded", () => {
+    const container = document.getElementById("zones-container");
+    CONFIG.zones.forEach(zone => {
+      container.innerHTML += `
+        <div class="zone-block">
+          <div class="zone-title">KHU ${zone.id} — ${zone.name}</div>
+          <div id="zone-grid-${zone.id}" class="tables-grid"></div>
+        </div>
+      `;
+    });
+  });
+</script>
+
+<!-- ═══════════════════════════════════════════════
+  MOBILE UI CONTROLLER
+═══════════════════════════════════════════════ -->
+<script>
+const MobileUI = {
+  isMobile() {
+    return window.innerWidth < 640;
+  },
+
+  // Sync bottom nav active state với current view
+  syncNav(viewName) {
+    if (!this.isMobile()) return;
+    document.querySelectorAll('.bnav-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.view === viewName);
+    });
+  },
+
+  // Hiện/ẩn toggle button khi vào order view
+  onOrderView(show) {
+    const toggle = document.getElementById('order-panel-toggle');
+    if (!toggle) return;
+    if (this.isMobile() && show) {
+      toggle.style.display = 'flex';
+    } else {
+      toggle.style.display = 'none';
+      this.closeOrderPanel();
+    }
+  },
+
+  // Mở/đóng order panel drawer
+  toggleOrderPanel() {
+    const panel = document.getElementById('order-panel-drawer');
+    const toggle = document.getElementById('order-panel-toggle');
+    if (!panel || !toggle) return;
+    const isOpen = panel.classList.contains('panel-open');
+    if (isOpen) {
+      this.closeOrderPanel();
+    } else {
+      panel.classList.add('panel-open');
+      toggle.classList.add('open');
+      toggle.querySelector('span:first-child').textContent = '✕ Đóng đơn hàng';
+    }
+  },
+
+  closeOrderPanel() {
+    const panel = document.getElementById('order-panel-drawer');
+    const toggle = document.getElementById('order-panel-toggle');
+    if (panel) panel.classList.remove('panel-open');
+    if (toggle) {
+      toggle.classList.remove('open');
+      const firstSpan = toggle.querySelector('span:first-child');
+      if (firstSpan) firstSpan.textContent = '🛒 Xem đơn hàng';
+    }
+  },
+
+  // Cập nhật tổng tiền hiển thị trên toggle button
+  updateToggleTotal(total) {
+    const el = document.getElementById('toggle-total-val');
+    if (el) el.textContent = total || '0đ';
+  },
+
+  // Khởi tạo: hook vào App.showView nếu có
+  init() {
+    // Responsive bottom nav visibility
+    const showBottomNav = () => {
+      const nav = document.getElementById('bottom-nav');
+      if (nav) {
+        nav.style.display = this.isMobile() ? 'flex' : 'none';
+      }
+    };
+    showBottomNav();
+    window.addEventListener('resize', showBottomNav);
+
+    // Patch App.showView để sync bottom nav
+    if (typeof App !== 'undefined' && App.showView) {
+      const orig = App.showView.bind(App);
+      App.showView = (viewName) => {
+        orig(viewName);
+        MobileUI.syncNav(viewName);
+        MobileUI.onOrderView(viewName === 'order');
+      };
+    }
+
+    // Đóng order panel khi bấm Escape
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') MobileUI.closeOrderPanel();
+    });
+  }
+};
+
+// Khởi tạo sau khi app load
+document.addEventListener('DOMContentLoaded', () => {
+  // Đợi app.js init xong
+  setTimeout(() => MobileUI.init(), 200);
+});
+</script>
+
+</body>
+</html>
